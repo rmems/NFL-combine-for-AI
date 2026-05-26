@@ -1,0 +1,37 @@
+{
+  "manifest_version": "1.0.0",
+  "model_name": "grok-1",
+  "model_family": "grok",
+  "source_artifact": {
+    "format": "safetensors",
+    "hf_repo_id": "xai-org/grok-1",
+    "hf_revision": "main",
+    "parameter_count": 314000000000,
+    "moe_layout": {
+      "num_experts": 8,
+      "top_k": 2
+    },
+    "notes": "Future planning: Grok-1 MoE source checkpoint"
+  },
+  "generated_artifacts": [
+    {
+      "format": "myelin",
+      "status": "planned",
+      "quantization_method": "saaq",
+      "bits": 3,
+      "backend_compatibility": ["myelin-accelerator"],
+      "notes": "SAAQ conversion target for myelin-accelerator"
+    }
+  ],
+  "backend_compatibility": {
+    "gguf": false,
+    "awq": false,
+    "gptq": false,
+    "myelin_accelerator": true
+  },
+  "saaq_metadata": {
+    "experiment_id": "saaq-grok-001",
+    "routing_entropy": null,
+    "spike_density": null
+  }
+}

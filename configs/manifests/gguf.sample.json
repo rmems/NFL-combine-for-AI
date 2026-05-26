@@ -1,0 +1,19 @@
+{
+  "manifest_version": "1.0.0",
+  "model_name": "Llama-2-7B-Chat-GGUF",
+  "model_family": "llama2",
+  "source_artifact": {
+    "format": "gguf",
+    "path": "models/llama-2-7b-chat.Q4_K_M.gguf",
+    "checksum_sha256": "aabbccdd00112233445566778899aabbccddeeff00112233445566778899aabb",
+    "parameter_count": 7000000000,
+    "notes": "Local GGUF from TheBloke/Llama-2-7B-Chat-GGUF"
+  },
+  "generated_artifacts": [],
+  "backend_compatibility": {
+    "gguf": true,
+    "awq": false,
+    "gptq": false,
+    "myelin_accelerator": false
+  }
+}

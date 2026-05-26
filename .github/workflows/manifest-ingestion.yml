@@ -1,0 +1,93 @@
+name: Manifest Ingestion
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  manifest-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: "0.6.x"
+          enable-cache: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version-file: .python-version
+
+      - name: uv sync
+        run: uv sync --frozen
+
+      - name: Run manifest tests
+        run: uv run pytest tests/test_manifest.py -q
+
+      - name: Load example manifests
+        run: |
+          uv run python -c "
+          from nfl_combine_for_ai.manifest import load_manifest
+          from pathlib import Path
+          for path in Path('configs/manifests').glob('*.json'):
+              m = load_manifest(path)
+              print(f'OK  {path.name} -> {m.model_name}')
+          "
+
+      - name: Test valid manifest passes
+        run: |
+          uv run python -c "
+          from nfl_combine_for_ai.manifest import load_manifest_from_string
+          import json
+          raw = {
+              'manifest_version': '1.0.0',
+              'model_name': 'valid-model',
+              'source_artifact': {'format': 'gguf', 'path': 'model.gguf'}
+          }
+          m = load_manifest_from_string(json.dumps(raw))
+          assert m.model_name == 'valid-model'
+          print('PASS: valid manifest accepted')
+          "
+
+      - name: Test invalid manifest fails clearly
+        run: |
+          uv run python -c "
+          from nfl_combine_for_ai.manifest import load_manifest_from_string, ValidationError
+          import json
+          raw = {'manifest_version': '1.0.0', 'source_artifact': {'format': 'gguf'}}
+          try:
+              load_manifest_from_string(json.dumps(raw))
+              print('FAIL: should have raised ValidationError')
+              exit(1)
+          except ValidationError as e:
+              print('PASS: ValidationError raised for missing model_name')
+          "
+
+      - name: Test dispatch logic
+        run: |
+          uv run python -c "
+          from nfl_combine_for_ai.manifest import (
+              dispatch_artifact, ModelManifest, SourceArtifact,
+              GeneratedArtifact, ArtifactFormat, ArtifactStatus,
+          )
+          # GGUF
+          m = ModelManifest(model_name='x', source_artifact=SourceArtifact(format=ArtifactFormat.GGUF))
+          assert dispatch_artifact(m) == 'gguf'
+          # Safetensors/HF
+          m = ModelManifest(model_name='x', source_artifact=SourceArtifact(format=ArtifactFormat.SAFETENSORS))
+          assert dispatch_artifact(m) == 'safetensors_hf'
+          m = ModelManifest(model_name='x', source_artifact=SourceArtifact(format=ArtifactFormat.HF))
+          assert dispatch_artifact(m) == 'safetensors_hf'
+          # Generated placeholder
+          m = ModelManifest(
+              model_name='x',
+              source_artifact=SourceArtifact(format=ArtifactFormat.SAFETENSORS),
+              generated_artifacts=[GeneratedArtifact(format=ArtifactFormat.AWQ, status=ArtifactStatus.SUCCESS)],
+          )
+          assert dispatch_artifact(m) == 'generated_awq'
+          print('PASS: all dispatch tags correct')
+          "

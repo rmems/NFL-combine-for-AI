@@ -1,0 +1,10 @@
+{
+  "artifact_version": "0.2.0",
+  "benchmark_id": "myelin-conv2d-001",
+  "kernel_occupancy": 0.78,
+  "vram_bandwidth_gbps": 900.0,
+  "gpu_utilization_percent": 85.0,
+  "latency_ms": 4.2,
+  "throughput_tops": 125.0,
+  "raw_path": "experiments/myelin-conv2d-001/benchmark.json"
+}

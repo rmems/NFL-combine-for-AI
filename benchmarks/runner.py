@@ -20,7 +20,16 @@ from benchmarks.models import (
     default_quantization_registry,
     scoped_seed,
 )
-from benchmarks.reporting import metrics_to_row, write_csv, write_json
+from benchmarks.reporting import metrics_to_row, telemetry_to_row, write_csv, write_json
+from benchmarks.telemetry import (
+    CorinthCanalArtifact,
+    MyelinAcceleratorArtifact,
+    TelemetrySnapshot,
+    collect_telemetry_snapshot,
+    merge_upstream_artifacts,
+    telemetry_to_dict,
+    write_telemetry_json,
+)
 
 
 @dataclass(frozen=True)
@@ -35,6 +44,7 @@ class RunMetadata:
     cpu: str
     cpu_count: int | None
     timestamp: str
+    telemetry: TelemetrySnapshot
 
 
 @dataclass(frozen=True)
@@ -44,6 +54,7 @@ class DatasetResult:
     sample_count: int
     quantization: QuantizationProfile
     metrics: MetricsSummary
+    telemetry: TelemetrySnapshot | None = None
 
 
 def load_config(path: Path) -> dict[str, Any]:
@@ -65,6 +76,7 @@ def get_git_info() -> tuple[str, str]:
 
 def build_metadata(run_name: str, seed: int) -> RunMetadata:
     commit, branch = get_git_info()
+    telemetry = collect_telemetry_snapshot()
     return RunMetadata(
         run_id=f"{time.strftime('%Y%m%dT%H%M%SZ', time.gmtime())}-{commit[:7]}",
         run_name=run_name,
@@ -76,6 +88,7 @@ def build_metadata(run_name: str, seed: int) -> RunMetadata:
         cpu=platform.processor() or platform.machine(),
         cpu_count=os.cpu_count(),
         timestamp=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        telemetry=telemetry,
     )
 
 
@@ -93,6 +106,27 @@ def load_datasets(config: dict[str, Any], base_path: Path) -> list[LoadedDataset
     return datasets
 
 
+def _load_upstream_telemetry(
+    config: dict[str, Any],
+    base_path: Path,
+    telemetry: TelemetrySnapshot,
+) -> TelemetrySnapshot:
+    """Load optional upstream telemetry artifacts referenced by the config."""
+    corinth = None
+    myelin = None
+
+    telemetry_cfg = config.get("telemetry") or {}
+    corinth_path = telemetry_cfg.get("corinth_canal_path")
+    if corinth_path:
+        corinth = CorinthCanalArtifact.from_file(base_path / corinth_path)
+
+    myelin_path = telemetry_cfg.get("myelin_accelerator_path")
+    if myelin_path:
+        myelin = MyelinAcceleratorArtifact.from_file(base_path / myelin_path)
+
+    return merge_upstream_artifacts(telemetry, corinth=corinth, myelin=myelin)
+
+
 def run_benchmarks(
     config_path: Path,
     output_dir: Path,
@@ -103,6 +137,26 @@ def run_benchmarks(
     run_name = config.get("run_name", "benchmark-run")
     seed = seed_override if seed_override is not None else config.get("seed", 0)
     metadata = build_metadata(run_name, seed)
+
+    # Optionally enrich telemetry with upstream artifacts
+    telemetry = _load_upstream_telemetry(
+        config,
+        config_path.parent,
+        metadata.telemetry,
+    )
+    metadata = RunMetadata(
+        run_id=metadata.run_id,
+        run_name=metadata.run_name,
+        seed=metadata.seed,
+        git_commit=metadata.git_commit,
+        git_branch=metadata.git_branch,
+        host=metadata.host,
+        os=metadata.os,
+        cpu=metadata.cpu,
+        cpu_count=metadata.cpu_count,
+        timestamp=metadata.timestamp,
+        telemetry=telemetry,
+    )
 
     datasets = load_datasets(config, config_path.parent)
     model_spec = ModelSpec.from_dict(config["model"])
@@ -137,6 +191,7 @@ def run_benchmarks(
                     sample_count=len(dataset.records),
                     quantization=profile,
                     metrics=metrics,
+                    telemetry=telemetry,
                 )
             )
 
@@ -175,6 +230,7 @@ def write_reports(
             "quantization_format": result.quantization.format,
             "quantization_bits": result.quantization.bits,
             **metrics_to_row(result.metrics),
+            **telemetry_to_row(result.telemetry),
         }
         rows.append(row)
 
@@ -195,6 +251,7 @@ def write_reports(
                 "backend": model_spec.backend,
                 "revision": model_spec.revision,
             },
+            "telemetry": telemetry_to_dict(metadata.telemetry),
         },
         "results": rows,
     }
@@ -204,3 +261,7 @@ def write_reports(
         write_json(output_dir / "json" / f"{run_id}.json", payload)
     if "csv" in formats:
         write_csv(output_dir / "csv" / f"{run_id}.csv", rows)
+    write_telemetry_json(
+        output_dir / "telemetry" / f"{run_id}.telemetry.json",
+        metadata.telemetry,
+    )
