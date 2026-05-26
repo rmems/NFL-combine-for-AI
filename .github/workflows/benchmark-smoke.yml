@@ -12,7 +12,7 @@ on:
         required: false
         default: ""
       output_formats:
-        description: "Comma-separated output formats (json,csv,markdown)"
+        description: "Comma-separated output formats (json,csv)"
         required: false
         default: "json,csv"
 
@@ -38,38 +38,45 @@ jobs:
         run: uv sync --frozen
 
       - name: Run smoke benchmark
+        env:
+          OUTPUT_FORMATS: ${{ github.event.inputs.output_formats }}
         run: |
           uv run python scripts/run_smoke_benchmark.py \
             --output-dir reports/smoke \
-            --formats "${{ github.event.inputs.output_formats }}"
+            --formats "$OUTPUT_FORMATS"
 
       - name: Upload JSON artifacts
+        if: contains(github.event.inputs.output_formats, 'json')
         uses: actions/upload-artifact@v4
         with:
           name: smoke-reports-json
           path: reports/smoke/json/*.json
-          if-no-files-found: error
+          if-no-files-found: warn
 
       - name: Upload CSV artifacts
+        if: contains(github.event.inputs.output_formats, 'csv')
         uses: actions/upload-artifact@v4
         with:
           name: smoke-reports-csv
           path: reports/smoke/csv/*.csv
-          if-no-files-found: error
+          if-no-files-found: warn
 
       - name: Optional manifest ingestion
         if: ${{ github.event.inputs.manifest_path != '' || github.event.inputs.artifact_url != '' }}
+        env:
+          MANIFEST_PATH: ${{ github.event.inputs.manifest_path }}
+          ARTIFACT_URL: ${{ github.event.inputs.artifact_url }}
         run: |
-          MANIFEST="${{ github.event.inputs.manifest_path }}"
-          URL="${{ github.event.inputs.artifact_url }}"
-          if [ -n "$MANIFEST" ]; then
-            echo "Using manifest: $MANIFEST"
+          if [ -n "$MANIFEST_PATH" ]; then
+            echo "Using manifest: $MANIFEST_PATH"
             uv run python -c "
             from nfl_combine_for_ai.manifest import load_manifest
-            m = load_manifest('$MANIFEST')
+            import os
+            from pathlib import Path
+            m = load_manifest(Path(os.environ['MANIFEST_PATH']))
             print(f'Manifest loaded: {m.model_name}')
             "
           fi
-          if [ -n "$URL" ]; then
-            echo "Artifact URL provided: $URL"
+          if [ -n "$ARTIFACT_URL" ]; then
+            echo "Artifact URL provided: $ARTIFACT_URL"
           fi

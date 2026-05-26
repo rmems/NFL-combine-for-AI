@@ -41,6 +41,15 @@ def telemetry_to_row(telemetry: TelemetrySnapshot | None) -> dict[str, Any]:
     """Flatten telemetry into prefixed CSV/JSON-safe fields."""
     if telemetry is None:
         return {
+            "telemetry_sys_cpu_count_logical": None,
+            "telemetry_sys_cpu_count_physical": None,
+            "telemetry_sys_memory_total_gb": None,
+            "telemetry_sys_memory_available_gb": None,
+            "telemetry_sys_gpu_count": None,
+            "telemetry_sys_gpu_names": None,
+            "telemetry_sys_gpu_driver_version": None,
+            "telemetry_sys_platform": None,
+            "telemetry_sys_python_version": None,
             "telemetry_routing_entropy": None,
             "telemetry_spike_density": None,
             "telemetry_latent_stability": None,
@@ -48,8 +57,7 @@ def telemetry_to_row(telemetry: TelemetrySnapshot | None) -> dict[str, Any]:
             "telemetry_event_rate": None,
             "telemetry_kernel_occupancy": None,
             "telemetry_vram_bandwidth_gbps": None,
-            "telemetry_sys_cpu_count_logical": None,
-            "telemetry_sys_memory_total_gb": None,
+            "telemetry_notes": None,
         }
     d: dict[str, Any] = {}
     sys_dict = asdict(telemetry.system)

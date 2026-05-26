@@ -172,7 +172,9 @@ def test_dispatch_unknown() -> None:
 def test_load_example_manifests() -> None:
     """Ensure all committed example manifests validate successfully."""
     manifest_dir = Path(__file__).resolve().parents[1] / "configs" / "manifests"
-    for path in manifest_dir.glob("*.json"):
+    paths = list(manifest_dir.glob("*.json"))
+    assert paths, f"no manifest files found in {manifest_dir}"
+    for path in paths:
         manifest = load_manifest(path)
         assert manifest.manifest_version == "1.0.0"
         assert manifest.model_name

@@ -96,10 +96,9 @@ def load_manifest_from_string(text: str) -> ModelManifest:
 
 def dispatch_artifact(manifest: ModelManifest) -> str:
     """Return a dispatch tag based on the source artifact format."""
-    if manifest.generated_artifacts:
-        first_gen = manifest.generated_artifacts[0]
-        if first_gen.status in (ArtifactStatus.SUCCESS, ArtifactStatus.PARTIAL, ArtifactStatus.PLANNED):
-            return f"generated_{first_gen.format.value}"
+    for gen in manifest.generated_artifacts:
+        if gen.status in (ArtifactStatus.SUCCESS, ArtifactStatus.PARTIAL, ArtifactStatus.PLANNED):
+            return f"generated_{gen.format.value}"
     source_format = manifest.source_artifact.format
     if source_format == ArtifactFormat.GGUF:
         return "gguf"

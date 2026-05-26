@@ -45,7 +45,7 @@ SAMPLE_MYELIN = {
 
 def test_system_snapshot_fields() -> None:
     snap = collect_system_snapshot()
-    assert snap.cpu_count_logical is not None or snap.cpu_count_logical is None
+    assert snap.cpu_count_logical is None or isinstance(snap.cpu_count_logical, int)
     assert isinstance(snap.platform, str)
     assert isinstance(snap.python_version, str)
 
@@ -271,9 +271,9 @@ def test_load_fixture_files() -> None:
     fixture_dir = Path(__file__).resolve().parent / "fixtures"
     corinth_path = fixture_dir / "corinth_canal.sample.json"
     myelin_path = fixture_dir / "myelin_accelerator.sample.json"
-    if corinth_path.exists():
-        c = CorinthCanalArtifact.from_file(corinth_path)
-        assert c.experiment_id == "saaq-lambda-001"
-    if myelin_path.exists():
-        m = MyelinAcceleratorArtifact.from_file(myelin_path)
-        assert m.benchmark_id == "myelin-conv2d-001"
+    assert corinth_path.exists(), f"missing fixture: {corinth_path}"
+    assert myelin_path.exists(), f"missing fixture: {myelin_path}"
+    c = CorinthCanalArtifact.from_file(corinth_path)
+    assert c.experiment_id == "saaq-lambda-001"
+    m = MyelinAcceleratorArtifact.from_file(myelin_path)
+    assert m.benchmark_id == "myelin-conv2d-001"

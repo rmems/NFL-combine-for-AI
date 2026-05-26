@@ -11,7 +11,7 @@ sys.path.append(str(Path(__file__).resolve().parents[1]))
 from benchmarks.runner import run_benchmarks
 
 
-def parse_args() -> argparse.Namespace:
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Run a tiny smoke benchmark with dummy data."
     )
@@ -32,7 +32,7 @@ def parse_args() -> argparse.Namespace:
         default=42,
         help="RNG seed for the run.",
     )
-    return parser.parse_args()
+    return parser.parse_args(argv)
 
 
 def main() -> None:

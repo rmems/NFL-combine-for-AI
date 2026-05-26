@@ -198,6 +198,8 @@ def test_entropy_from_counts() -> None:
 
 
 def test_cli_help() -> None:
+    from scripts.run_smoke_benchmark import parse_args as smoke_parse_args
+
     with pytest.raises(SystemExit) as exc_info:
-        parse_args()
-    assert exc_info.value.code == 2
+        smoke_parse_args(["--help"])
+    assert exc_info.value.code == 0

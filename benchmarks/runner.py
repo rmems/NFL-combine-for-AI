@@ -106,19 +106,20 @@ def load_datasets(config: dict[str, Any], base_path: Path) -> list[LoadedDataset
     return datasets
 
 
-def _load_upstream_telemetry(config: dict[str, Any]) -> TelemetrySnapshot:
+def _load_upstream_telemetry(config: dict[str, Any], base_path: Path) -> TelemetrySnapshot:
     """Load optional upstream telemetry artifacts referenced by the config."""
     telemetry = collect_telemetry_snapshot()
     corinth = None
     myelin = None
 
-    corinth_path = config.get("telemetry", {}).get("corinth_canal_path")
+    telemetry_cfg = config.get("telemetry") or {}
+    corinth_path = telemetry_cfg.get("corinth_canal_path")
     if corinth_path:
-        corinth = CorinthCanalArtifact.from_file(Path(corinth_path))
+        corinth = CorinthCanalArtifact.from_file(base_path / corinth_path)
 
-    myelin_path = config.get("telemetry", {}).get("myelin_accelerator_path")
+    myelin_path = telemetry_cfg.get("myelin_accelerator_path")
     if myelin_path:
-        myelin = MyelinAcceleratorArtifact.from_file(Path(myelin_path))
+        myelin = MyelinAcceleratorArtifact.from_file(base_path / myelin_path)
 
     return merge_upstream_artifacts(telemetry, corinth=corinth, myelin=myelin)
 
@@ -135,7 +136,7 @@ def run_benchmarks(
     metadata = build_metadata(run_name, seed)
 
     # Optionally enrich telemetry with upstream artifacts
-    telemetry = _load_upstream_telemetry(config)
+    telemetry = _load_upstream_telemetry(config, config_path.parent)
     metadata = RunMetadata(
         run_id=metadata.run_id,
         run_name=metadata.run_name,
@@ -253,8 +254,7 @@ def write_reports(
         write_json(output_dir / "json" / f"{run_id}.json", payload)
     if "csv" in formats:
         write_csv(output_dir / "csv" / f"{run_id}.csv", rows)
-    if "json" in formats:
-        write_telemetry_json(
-            output_dir / "telemetry" / f"{run_id}.telemetry.json",
-            metadata.telemetry,
-        )
+    write_telemetry_json(
+        output_dir / "telemetry" / f"{run_id}.telemetry.json",
+        metadata.telemetry,
+    )
