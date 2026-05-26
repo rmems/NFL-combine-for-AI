@@ -106,9 +106,12 @@ def load_datasets(config: dict[str, Any], base_path: Path) -> list[LoadedDataset
     return datasets
 
 
-def _load_upstream_telemetry(config: dict[str, Any], base_path: Path) -> TelemetrySnapshot:
+def _load_upstream_telemetry(
+    config: dict[str, Any],
+    base_path: Path,
+    telemetry: TelemetrySnapshot,
+) -> TelemetrySnapshot:
     """Load optional upstream telemetry artifacts referenced by the config."""
-    telemetry = collect_telemetry_snapshot()
     corinth = None
     myelin = None
 
@@ -136,7 +139,11 @@ def run_benchmarks(
     metadata = build_metadata(run_name, seed)
 
     # Optionally enrich telemetry with upstream artifacts
-    telemetry = _load_upstream_telemetry(config, config_path.parent)
+    telemetry = _load_upstream_telemetry(
+        config,
+        config_path.parent,
+        metadata.telemetry,
+    )
     metadata = RunMetadata(
         run_id=metadata.run_id,
         run_name=metadata.run_name,
