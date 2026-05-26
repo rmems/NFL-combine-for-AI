@@ -11,3 +11,13 @@ Owns:
 Does not own:
 - quantization kernels
 - model-specific quantization recipes
+
+## Quickstart
+
+Run the sample benchmark harness with the mock backend:
+
+```bash
+python scripts/benchmark.py --config configs/benchmark.sample.json
+```
+
+Reports are written to `reports/json` and `reports/csv` by default.

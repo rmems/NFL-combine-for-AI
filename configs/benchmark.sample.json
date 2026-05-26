@@ -1,0 +1,52 @@
+{
+  "run_name": "sample-mock-run",
+  "seed": 1337,
+  "model": {
+    "backend": "mock",
+    "name": "toy-model",
+    "revision": "local"
+  },
+  "quantization": [
+    "fp16",
+    "awq",
+    "gptq",
+    "gguf"
+  ],
+  "datasets": [
+    {
+      "name": "lambada",
+      "source": "jsonl",
+      "path": "datasets/lambada.sample.jsonl",
+      "split": "validation",
+      "max_samples": 2
+    },
+    {
+      "name": "wikitext2",
+      "source": "jsonl",
+      "path": "datasets/wikitext2.sample.jsonl",
+      "split": "validation",
+      "max_samples": 2
+    },
+    {
+      "name": "hellaswag",
+      "source": "jsonl",
+      "path": "datasets/hellaswag.sample.jsonl",
+      "split": "validation",
+      "max_samples": 2
+    },
+    {
+      "name": "piqa",
+      "source": "jsonl",
+      "path": "datasets/piqa.sample.jsonl",
+      "split": "validation",
+      "max_samples": 2
+    },
+    {
+      "name": "arc-easy",
+      "source": "jsonl",
+      "path": "datasets/arc_easy.sample.jsonl",
+      "split": "validation",
+      "max_samples": 2
+    }
+  ]
+}
