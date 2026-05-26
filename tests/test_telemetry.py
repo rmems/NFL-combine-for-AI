@@ -59,6 +59,7 @@ def test_telemetry_to_dict() -> None:
         gpu_count=1,
         gpu_names=["NVIDIA GeForce RTX 4090"],
         gpu_driver_version="545.23",
+        cuda_version="12.4",
         platform="Linux-6.5-x86_64",
         python_version="3.14.0",
     )
@@ -108,6 +109,7 @@ def test_telemetry_dict_no_gpu() -> None:
         gpu_count=None,
         gpu_names=None,
         gpu_driver_version=None,
+        cuda_version=None,
         platform="Linux",
         python_version="3.14.0",
     )
@@ -127,6 +129,7 @@ def test_write_telemetry_json() -> None:
         gpu_count=None,
         gpu_names=None,
         gpu_driver_version=None,
+        cuda_version=None,
         platform="Linux",
         python_version="3.14.0",
     )
@@ -190,6 +193,7 @@ def test_merge_upstream_corinth_only() -> None:
         gpu_count=None,
         gpu_names=None,
         gpu_driver_version=None,
+        cuda_version=None,
         platform="Linux",
         python_version="3.14.0",
     )
@@ -211,6 +215,7 @@ def test_merge_upstream_myelin_only() -> None:
         gpu_count=None,
         gpu_names=None,
         gpu_driver_version=None,
+        cuda_version=None,
         platform="Linux",
         python_version="3.14.0",
     )
@@ -231,6 +236,7 @@ def test_merge_upstream_both() -> None:
         gpu_count=None,
         gpu_names=None,
         gpu_driver_version=None,
+        cuda_version=None,
         platform="Linux",
         python_version="3.14.0",
     )
@@ -253,6 +259,7 @@ def test_corinth_canal_preserves_existing_routing() -> None:
         gpu_count=None,
         gpu_names=None,
         gpu_driver_version=None,
+        cuda_version=None,
         platform="Linux",
         python_version="3.14.0",
     )

@@ -21,3 +21,9 @@ python scripts/benchmark.py --config configs/benchmark.sample.json
 ```
 
 Reports are written to `reports/json` and `reports/csv` by default.
+
+Run a single-command artifact smoke benchmark from a `magere-brug` manifest:
+
+```bash
+./scripts/run_smoke_benchmark.sh configs/manifests/safetensors_hf.sample.json
+```

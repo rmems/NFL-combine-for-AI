@@ -48,6 +48,7 @@ def telemetry_to_row(telemetry: TelemetrySnapshot | None) -> dict[str, Any]:
             "telemetry_sys_gpu_count": None,
             "telemetry_sys_gpu_names": None,
             "telemetry_sys_gpu_driver_version": None,
+            "telemetry_sys_cuda_version": None,
             "telemetry_sys_platform": None,
             "telemetry_sys_python_version": None,
             "telemetry_routing_entropy": None,
