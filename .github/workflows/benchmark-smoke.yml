@@ -1,0 +1,75 @@
+name: Benchmark Smoke
+
+on:
+  workflow_dispatch:
+    inputs:
+      manifest_path:
+        description: "Path to a manifest JSON file (optional)"
+        required: false
+        default: ""
+      artifact_url:
+        description: "URL to a manifest artifact (optional)"
+        required: false
+        default: ""
+      output_formats:
+        description: "Comma-separated output formats (json,csv,markdown)"
+        required: false
+        default: "json,csv"
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: "0.6.x"
+          enable-cache: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version-file: .python-version
+
+      - name: uv sync
+        run: uv sync --frozen
+
+      - name: Run smoke benchmark
+        run: |
+          uv run python scripts/run_smoke_benchmark.py \
+            --output-dir reports/smoke \
+            --formats "${{ github.event.inputs.output_formats }}"
+
+      - name: Upload JSON artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-reports-json
+          path: reports/smoke/json/*.json
+          if-no-files-found: error
+
+      - name: Upload CSV artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-reports-csv
+          path: reports/smoke/csv/*.csv
+          if-no-files-found: error
+
+      - name: Optional manifest ingestion
+        if: ${{ github.event.inputs.manifest_path != '' || github.event.inputs.artifact_url != '' }}
+        run: |
+          MANIFEST="${{ github.event.inputs.manifest_path }}"
+          URL="${{ github.event.inputs.artifact_url }}"
+          if [ -n "$MANIFEST" ]; then
+            echo "Using manifest: $MANIFEST"
+            uv run python -c "
+            from nfl_combine_for_ai.manifest import load_manifest
+            m = load_manifest('$MANIFEST')
+            print(f'Manifest loaded: {m.model_name}')
+            "
+          fi
+          if [ -n "$URL" ]; then
+            echo "Artifact URL provided: $URL"
+          fi

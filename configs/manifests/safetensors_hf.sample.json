@@ -1,0 +1,39 @@
+{
+  "manifest_version": "1.0.0",
+  "model_name": "Meta-Llama-3-8B-Instruct",
+  "model_family": "llama3",
+  "source_artifact": {
+    "format": "safetensors",
+    "path": "models/meta-llama/Meta-Llama-3-8B-Instruct",
+    "hf_repo_id": "meta-llama/Meta-Llama-3-8B-Instruct",
+    "hf_revision": "main",
+    "parameter_count": 8000000000,
+    "notes": "Local HF checkout with safetensors weights"
+  },
+  "generated_artifacts": [
+    {
+      "format": "awq",
+      "status": "planned",
+      "quantization_method": "awq",
+      "bits": 4,
+      "group_size": 128,
+      "backend_compatibility": ["vllm", "autoawq"],
+      "notes": "AWQ conversion queued for next run"
+    },
+    {
+      "format": "gptq",
+      "status": "planned",
+      "quantization_method": "gptq",
+      "bits": 4,
+      "group_size": 128,
+      "backend_compatibility": ["vllm", "auto-gptq"],
+      "notes": "GPTQ conversion queued for next run"
+    }
+  ],
+  "backend_compatibility": {
+    "gguf": false,
+    "awq": false,
+    "gptq": false,
+    "myelin_accelerator": false
+  }
+}
