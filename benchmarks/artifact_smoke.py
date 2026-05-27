@@ -145,9 +145,6 @@ def _load_smoke_dataset(dataset_path: Path, max_samples: int, dataset_name: str)
 
 
 def _peak_vram_gb_from_metadata(metadata_vram_gb: float, gpu_memory_mb: list[int | None]) -> float | None:
-    seen = [value for value in gpu_memory_mb if value is not None]
-    if seen:
-        return max(seen) / 1024.0
     return metadata_vram_gb
 
 

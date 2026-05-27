@@ -9,6 +9,12 @@ fi
 manifest_path="$1"
 shift
 
+if command -v realpath >/dev/null 2>&1; then
+  manifest_path="$(realpath "$manifest_path")"
+else
+  manifest_path="$(python -c 'from pathlib import Path; import sys; print(Path(sys.argv[1]).resolve())' "$manifest_path")"
+fi
+
 script_dir="$(cd -- "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 repo_root="$(cd -- "${script_dir}/.." && pwd)"
 

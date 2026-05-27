@@ -27,11 +27,14 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 def main() -> None:
     args = parse_args()
     formats = [value.strip() for value in args.formats.split(",") if value.strip()]
+    dataset_path = args.dataset
+    if dataset_path is not None and not dataset_path.is_absolute():
+        dataset_path = (Path.cwd() / dataset_path).resolve()
     payload = run_artifact_smoke(
         manifest_path=args.manifest,
         output_dir=args.output_dir,
         formats=formats,
-        dataset_path=args.dataset,
+        dataset_path=dataset_path,
         max_samples=args.max_samples,
         seed=args.seed,
     )
