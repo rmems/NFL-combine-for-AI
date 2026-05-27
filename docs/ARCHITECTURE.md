@@ -86,6 +86,49 @@ Telemetry fields are flattened with a `telemetry_` prefix in both JSON and CSV r
 
 A dedicated `reports/telemetry/<run_id>.telemetry.json` file is also emitted per run.
 
+## Artifact Smoke Run
+
+Issue #3 adds a single-command manifest-driven smoke benchmark path for Vultr sprint validation.
+
+### Entrypoints
+
+- Shell wrapper: `scripts/run_smoke_benchmark.sh <manifest-path> [extra args...]`
+- Python CLI: `scripts/run_artifact_smoke.py --manifest <path>`
+
+Example:
+
+```bash
+./scripts/run_smoke_benchmark.sh \
+  configs/manifests/safetensors_hf.sample.json \
+  --output-dir /tmp/artifact-smoke
+```
+
+### Dispatch rules
+
+- Prefer generated `AWQ` / `GPTQ` artifacts only when status is `success` or `partial` and the local artifact path exists.
+- Otherwise run `GGUF` sources when the local path exists.
+- Otherwise run `HF` / `Safetensors` sources when a local path exists or `hf_repo_id` is present.
+- Unsupported or missing artifacts produce a structured failure report instead of crashing without output.
+
+### Outputs
+
+- JSON: `reports/json/<run_id>.artifact-smoke.json`
+- CSV: `reports/csv/<run_id>.artifact-smoke.csv`
+
+Each smoke report includes:
+
+- `model_id`
+- `source_format`
+- `runtime_format`
+- `generated_format`
+- `quantization`
+- `gpu`
+- `cuda`
+- `throughput_tps`
+- `peak_vram_gb`
+- `perplexity`
+- `failure_reason` when the smoke run cannot execute
+
 ## CI / Actions
 
 See `.github/workflows/`:

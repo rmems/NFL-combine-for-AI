@@ -78,7 +78,7 @@ def build_metadata(run_name: str, seed: int) -> RunMetadata:
     commit, branch = get_git_info()
     telemetry = collect_telemetry_snapshot()
     return RunMetadata(
-        run_id=f"{time.strftime('%Y%m%dT%H%M%SZ', time.gmtime())}-{commit[:7]}",
+        run_id=f"{time.strftime('%Y%m%dT%H%M%S', time.gmtime())}.{int(time.time() % 1 * 1000):03d}Z-{commit[:7]}",
         run_name=run_name,
         seed=seed,
         git_commit=commit,

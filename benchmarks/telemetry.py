@@ -20,6 +20,7 @@ class SystemSnapshot:
     gpu_count: int | None
     gpu_names: list[str] | None
     gpu_driver_version: str | None
+    cuda_version: str | None
     platform: str
     python_version: str
 
@@ -83,6 +84,7 @@ def collect_system_snapshot() -> SystemSnapshot:
         pass
 
     gpu_count, gpu_names, gpu_driver = _collect_gpu_info_nvidia()
+    cuda_version = _collect_cuda_version()
 
     return SystemSnapshot(
         cpu_count_logical=cpu_count_logical,
@@ -92,9 +94,46 @@ def collect_system_snapshot() -> SystemSnapshot:
         gpu_count=gpu_count,
         gpu_names=gpu_names,
         gpu_driver_version=gpu_driver,
+        cuda_version=cuda_version,
         platform=platform.platform(),
         python_version=platform.python_version(),
     )
+
+
+def _collect_cuda_version() -> str | None:
+    try:
+        output = subprocess.check_output(
+            ["nvidia-smi"],
+            text=True,
+            stderr=subprocess.DEVNULL,
+            timeout=5,
+        )
+        marker = "CUDA Version:"
+        if marker in output:
+            tail = output.split(marker, maxsplit=1)[1].strip()
+            parts = tail.split()
+            if parts:
+                return parts[0]
+    except Exception:
+        pass
+
+    try:
+        output = subprocess.check_output(
+            ["nvcc", "--version"],
+            text=True,
+            stderr=subprocess.DEVNULL,
+            timeout=5,
+        )
+        marker = "release "
+        if marker in output:
+            tail = output.split(marker, maxsplit=1)[1]
+            parts = tail.split(",", maxsplit=1)
+            if parts:
+                return parts[0].strip()
+    except Exception:
+        pass
+
+    return None
 
 
 def _collect_gpu_info_nvidia() -> tuple[int | None, list[str] | None, str | None]:
