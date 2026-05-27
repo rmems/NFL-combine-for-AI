@@ -67,7 +67,7 @@ def select_artifact_for_smoke(manifest: ModelManifest, base_path: Path) -> Artif
     source_path = _resolve_path(base_path, source.path)
 
     if source.format == ArtifactFormat.GGUF:
-        if source_path and source_path.exists():
+        if source_path and source_path.is_file():
             return ArtifactSelection(
                 status="success",
                 source_format=source.format.value,
@@ -241,7 +241,7 @@ def _build_failure_row(
 
 def _fallback_run_payload(manifest_path: Path, failure_reason: str) -> dict[str, Any]:
     timestamp = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
-    run_id = f"{time.strftime('%Y%m%dT%H%M%SZ', time.gmtime())}-artifact-smoke-failed"
+    run_id = f"{time.strftime('%Y%m%dT%H%M%S', time.gmtime())}.{int(time.time() % 1 * 1000):03d}Z-artifact-smoke-failed"
     row = {
         "run_id": run_id,
         "status": "failed",
@@ -344,6 +344,8 @@ def run_artifact_smoke(
     try:
         dataset, dataset_name = _resolve_dataset_path(manifest_path, dataset_path)
         _, records = _load_smoke_dataset(dataset, max_samples, dataset_name)
+        if not records:
+            raise ValueError(f"No records loaded from dataset: {dataset}")
         profile = default_quantization_registry().get(selection.quantization_name or "fp16")
         if profile is None:
             raise ValueError(f"Unsupported quantization profile: {selection.quantization_name}")

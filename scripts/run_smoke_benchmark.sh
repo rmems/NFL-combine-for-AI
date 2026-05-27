@@ -10,7 +10,7 @@ manifest_path="$1"
 shift
 
 if command -v realpath >/dev/null 2>&1; then
-  manifest_path="$(realpath "$manifest_path")"
+  manifest_path="$(realpath -m "$manifest_path")"
 else
   manifest_path="$(python3 -c 'from pathlib import Path; import sys; print(Path(sys.argv[1]).resolve())' "$manifest_path")"
 fi
