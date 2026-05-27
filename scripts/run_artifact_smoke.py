@@ -30,9 +30,12 @@ def main() -> None:
     dataset_path = args.dataset
     if dataset_path is not None and not dataset_path.is_absolute():
         dataset_path = (Path.cwd() / dataset_path).resolve()
+    output_dir = args.output_dir
+    if not output_dir.is_absolute():
+        output_dir = (Path.cwd() / output_dir).resolve()
     payload = run_artifact_smoke(
         manifest_path=args.manifest,
-        output_dir=args.output_dir,
+        output_dir=output_dir,
         formats=formats,
         dataset_path=dataset_path,
         max_samples=args.max_samples,

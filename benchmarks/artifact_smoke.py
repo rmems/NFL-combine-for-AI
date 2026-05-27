@@ -39,7 +39,7 @@ def _resolve_path(base_path: Path, raw_path: str | None) -> Path | None:
     return (base_path / path).resolve()
 
 
-def _runnable_generated_artifact(base_path: Path, generated: list[GeneratedArtifact]) -> ArtifactSelection | None:
+def _runnable_generated_artifact(base_path: Path, generated: list[GeneratedArtifact], source_format: ArtifactFormat | None = None) -> ArtifactSelection | None:
     for artifact in generated:
         if artifact.status not in (ArtifactStatus.SUCCESS, ArtifactStatus.PARTIAL):
             continue
@@ -49,7 +49,7 @@ def _runnable_generated_artifact(base_path: Path, generated: list[GeneratedArtif
         if resolved and resolved.exists():
             return ArtifactSelection(
                 status="success",
-                source_format="generated",
+                source_format=source_format.value if source_format else "unknown",
                 runtime_format=f"generated_{artifact.format.value}",
                 quantization_name=artifact.format.value,
                 generated_format=artifact.format.value,
@@ -59,7 +59,7 @@ def _runnable_generated_artifact(base_path: Path, generated: list[GeneratedArtif
 
 
 def select_artifact_for_smoke(manifest: ModelManifest, base_path: Path) -> ArtifactSelection:
-    generated = _runnable_generated_artifact(base_path, manifest.generated_artifacts)
+    generated = _runnable_generated_artifact(base_path, manifest.generated_artifacts, manifest.source_artifact.format)
     if generated is not None:
         return generated
 
@@ -87,14 +87,15 @@ def select_artifact_for_smoke(manifest: ModelManifest, base_path: Path) -> Artif
         )
 
     if source.format in (ArtifactFormat.SAFETENSORS, ArtifactFormat.HF):
-        if (source_path and source_path.exists()) or source.hf_repo_id:
+        local_exists = source_path and source_path.exists()
+        if local_exists or source.hf_repo_id:
             return ArtifactSelection(
                 status="success",
                 source_format=source.format.value,
                 runtime_format="safetensors_hf",
                 quantization_name="fp16",
                 generated_format=None,
-                artifact_path=str(source_path) if source_path else None,
+                artifact_path=str(source_path) if local_exists else None,
             )
         return ArtifactSelection(
             status="failed",
