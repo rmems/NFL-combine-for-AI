@@ -102,20 +102,34 @@ def collect_system_snapshot() -> SystemSnapshot:
 
 def _collect_cuda_version() -> str | None:
     try:
-        output = subprocess.check_output(["nvidia-smi"], text=True, stderr=subprocess.DEVNULL)
+        output = subprocess.check_output(
+            ["nvidia-smi"],
+            text=True,
+            stderr=subprocess.DEVNULL,
+            timeout=5,
+        )
         marker = "CUDA Version:"
         if marker in output:
             tail = output.split(marker, maxsplit=1)[1].strip()
-            return tail.split()[0]
+            parts = tail.split()
+            if parts:
+                return parts[0]
     except Exception:
         pass
 
     try:
-        output = subprocess.check_output(["nvcc", "--version"], text=True, stderr=subprocess.DEVNULL)
+        output = subprocess.check_output(
+            ["nvcc", "--version"],
+            text=True,
+            stderr=subprocess.DEVNULL,
+            timeout=5,
+        )
         marker = "release "
         if marker in output:
             tail = output.split(marker, maxsplit=1)[1]
-            return tail.split(",", maxsplit=1)[0].strip()
+            parts = tail.split(",", maxsplit=1)
+            if parts:
+                return parts[0].strip()
     except Exception:
         pass
 

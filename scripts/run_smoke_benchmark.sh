@@ -9,4 +9,8 @@ fi
 manifest_path="$1"
 shift
 
-uv run python scripts/run_artifact_smoke.py --manifest "$manifest_path" "$@"
+script_dir="$(cd -- "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+repo_root="$(cd -- "${script_dir}/.." && pwd)"
+
+cd "$repo_root"
+uv run python "$script_dir/run_artifact_smoke.py" --manifest "$manifest_path" "$@"

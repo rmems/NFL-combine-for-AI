@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -118,10 +117,24 @@ def select_artifact_for_smoke(manifest: ModelManifest, base_path: Path) -> Artif
     )
 
 
-def _load_smoke_dataset(dataset_path: Path, max_samples: int) -> tuple[str, list[Any]]:
+def _default_dataset_path() -> Path:
+    return Path(__file__).resolve().parents[1] / "configs" / "datasets" / "lambada.sample.jsonl"
+
+
+def _resolve_dataset_path(manifest_path: Path, dataset_path: Path | None) -> tuple[Path, str]:
+    if dataset_path is None:
+        return _default_dataset_path(), "lambada-smoke"
+
+    if dataset_path.is_absolute():
+        return dataset_path, dataset_path.stem
+
+    return (manifest_path.parent / dataset_path).resolve(), dataset_path.stem
+
+
+def _load_smoke_dataset(dataset_path: Path, max_samples: int, dataset_name: str) -> tuple[str, list[Any]]:
     loader = JsonlDatasetLoader()
     spec = DatasetSpec(
-        name="lambada-smoke",
+        name=dataset_name,
         source="jsonl",
         path=str(dataset_path),
         split="validation",
@@ -143,26 +156,16 @@ def _build_failure_payload(
     manifest: ModelManifest,
     manifest_path: Path,
     selection: ArtifactSelection,
+    dataset_name: str,
 ) -> dict[str, Any]:
-    gpu_names = metadata.telemetry.system.gpu_names or []
+    row = _build_failure_row(metadata, manifest, manifest_path, selection, dataset_name=dataset_name)
     return {
         "run": {
             "run_id": metadata.run_id,
             "run_name": metadata.run_name,
             "timestamp": metadata.timestamp,
         },
-        "result": {
-            "status": "failed",
-            "model_id": manifest.model_name,
-            "source_format": selection.source_format,
-            "runtime_format": selection.runtime_format,
-            "generated_format": selection.generated_format,
-            "artifact_path": selection.artifact_path,
-            "gpu": gpu_names[0] if gpu_names else None,
-            "cuda": metadata.telemetry.system.cuda_version,
-            "failure_reason": selection.failure_reason,
-            "manifest_path": str(manifest_path),
-        },
+        "result": row,
     }
 
 
@@ -172,6 +175,7 @@ def _build_success_row(
     manifest_path: Path,
     selection: ArtifactSelection,
     profile: Any,
+    dataset_name: str,
     sample_count: int,
     perplexity: float,
 ) -> dict[str, Any]:
@@ -199,7 +203,7 @@ def _build_success_row(
         "generation_tokens": 512,
         "peak_vram_gb": peak_vram_gb,
         "perplexity": perplexity,
-        "dataset": "lambada-smoke",
+        "dataset": dataset_name,
         "sample_count": sample_count,
         "failure_reason": None,
     }
@@ -210,6 +214,7 @@ def _build_failure_row(
     manifest: ModelManifest,
     manifest_path: Path,
     selection: ArtifactSelection,
+    dataset_name: str,
 ) -> dict[str, Any]:
     gpu_names = metadata.telemetry.system.gpu_names or []
     return {
@@ -230,10 +235,61 @@ def _build_failure_row(
         "generation_tokens": 512,
         "peak_vram_gb": None,
         "perplexity": None,
-        "dataset": "lambada-smoke",
+        "dataset": dataset_name,
         "sample_count": 0,
         "failure_reason": selection.failure_reason,
     }
+
+
+def _fallback_run_payload(manifest_path: Path, failure_reason: str) -> dict[str, Any]:
+    timestamp = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    run_id = f"{time.strftime('%Y%m%dT%H%M%SZ', time.gmtime())}-artifact-smoke-failed"
+    row = {
+        "run_id": run_id,
+        "status": "failed",
+        "timestamp": timestamp,
+        "model_id": None,
+        "model_family": None,
+        "manifest_path": str(manifest_path),
+        "source_format": None,
+        "runtime_format": None,
+        "generated_format": None,
+        "quantization": None,
+        "artifact_path": None,
+        "gpu": None,
+        "cuda": None,
+        "throughput_tps": None,
+        "generation_tokens": 512,
+        "peak_vram_gb": None,
+        "perplexity": None,
+        "dataset": "lambada-smoke",
+        "sample_count": 0,
+        "failure_reason": failure_reason,
+    }
+    return {
+        "run": {
+            "run_id": run_id,
+            "run_name": "artifact-smoke-failed",
+            "timestamp": timestamp,
+        },
+        "result": row,
+    }
+
+
+def _write_fallback_failure_outputs(
+    output_dir: Path,
+    formats: list[str],
+    manifest_path: Path,
+    failure_reason: str,
+) -> dict[str, Any]:
+    payload = _fallback_run_payload(manifest_path, failure_reason)
+    row = payload["result"]
+    run_id = payload["run"]["run_id"]
+    if "json" in formats:
+        write_json(output_dir / "json" / f"{run_id}.artifact-smoke.json", payload)
+    if "csv" in formats:
+        write_csv(output_dir / "csv" / f"{run_id}.artifact-smoke.csv", [row])
+    return payload
 
 
 def _write_failure_outputs(
@@ -243,9 +299,23 @@ def _write_failure_outputs(
     manifest: ModelManifest,
     manifest_path: Path,
     selection: ArtifactSelection,
+    dataset_name: str = "lambada-smoke",
 ) -> dict[str, Any]:
-    row = _build_failure_row(metadata, manifest, manifest_path, selection)
-    payload = _build_failure_payload(metadata, manifest, manifest_path, selection)
+    row = _build_failure_row(
+        metadata,
+        manifest,
+        manifest_path,
+        selection,
+        dataset_name=dataset_name,
+    )
+    payload = {
+        "run": {
+            "run_id": metadata.run_id,
+            "run_name": metadata.run_name,
+            "timestamp": metadata.timestamp,
+        },
+        "result": row,
+    }
     run_id = metadata.run_id
     if "json" in formats:
         write_json(output_dir / "json" / f"{run_id}.artifact-smoke.json", payload)
@@ -262,27 +332,32 @@ def run_artifact_smoke(
     max_samples: int = 2,
     seed: int = 42,
 ) -> dict[str, Any]:
-    manifest = load_manifest(manifest_path)
-    metadata = build_metadata(f"artifact-smoke-{manifest.model_name}", seed)
-    selection = select_artifact_for_smoke(manifest, manifest_path.parent)
+    try:
+        manifest = load_manifest(manifest_path)
+        metadata = build_metadata(f"artifact-smoke-{manifest.model_name}", seed)
+        selection = select_artifact_for_smoke(manifest, manifest_path.parent)
+    except Exception as exc:
+        return _write_fallback_failure_outputs(output_dir, formats, manifest_path, str(exc))
 
     if selection.status != "success":
         return _write_failure_outputs(output_dir, formats, metadata, manifest, manifest_path, selection)
 
+    dataset_name = "lambada-smoke"
     try:
-        dataset = dataset_path or Path("configs/datasets/lambada.sample.jsonl")
-        _, records = _load_smoke_dataset(dataset, max_samples)
+        dataset, dataset_name = _resolve_dataset_path(manifest_path, dataset_path)
+        _, records = _load_smoke_dataset(dataset, max_samples, dataset_name)
         profile = default_quantization_registry().get(selection.quantization_name or "fp16")
+        if profile is None:
+            raise ValueError(f"Unsupported quantization profile: {selection.quantization_name}")
         adapter = build_model_adapter(
             ModelSpec(backend="mock", name=manifest.model_name, revision=manifest.source_artifact.hf_revision),
             profile,
         )
 
         accumulator = MetricsAccumulator()
-        rng_seed = int(time.time()) ^ seed
         import random
 
-        rng = random.Random(rng_seed)
+        rng = random.Random(seed)
         for record in records:
             prediction = adapter.predict(record, rng)
             accumulator.add(record, prediction)
@@ -295,6 +370,7 @@ def run_artifact_smoke(
             manifest_path,
             selection,
             profile,
+            dataset_name,
             len(records),
             metrics.perplexity,
         )
@@ -325,4 +401,12 @@ def run_artifact_smoke(
             artifact_path=selection.artifact_path,
             failure_reason=str(exc),
         )
-        return _write_failure_outputs(output_dir, formats, metadata, manifest, manifest_path, failed)
+        return _write_failure_outputs(
+            output_dir,
+            formats,
+            metadata,
+            manifest,
+            manifest_path,
+            failed,
+            dataset_name=dataset_name,
+        )

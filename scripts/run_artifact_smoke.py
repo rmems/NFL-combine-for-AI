@@ -4,7 +4,9 @@ import argparse
 import sys
 from pathlib import Path
 
-sys.path.append(str(Path(__file__).resolve().parents[1]))
+REPO_ROOT = Path(__file__).resolve().parents[1]
+sys.path.append(str(REPO_ROOT))
+sys.path.append(str(REPO_ROOT / "src"))
 
 from benchmarks.artifact_smoke import run_artifact_smoke
 
@@ -34,6 +36,8 @@ def main() -> None:
         seed=args.seed,
     )
     print(payload["result"]["status"])
+    if payload["result"]["status"] != "success":
+        raise SystemExit(1)
 
 
 if __name__ == "__main__":
