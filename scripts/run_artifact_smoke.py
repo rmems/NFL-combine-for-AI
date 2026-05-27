@@ -27,12 +27,15 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 def main() -> None:
     args = parse_args()
     formats = [value.strip() for value in args.formats.split(",") if value.strip()]
+    caller_cwd = Path.cwd()
     dataset_path = args.dataset
     if dataset_path is not None and not dataset_path.is_absolute():
-        dataset_path = (Path.cwd() / dataset_path).resolve()
+        dataset_path = (caller_cwd / dataset_path).resolve()
     output_dir = args.output_dir
     if not output_dir.is_absolute():
-        output_dir = (Path.cwd() / output_dir).resolve()
+        output_dir = (caller_cwd / output_dir).resolve()
+    import os
+    os.chdir(REPO_ROOT)
     payload = run_artifact_smoke(
         manifest_path=args.manifest,
         output_dir=output_dir,

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import random
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -355,7 +356,6 @@ def run_artifact_smoke(
         )
 
         accumulator = MetricsAccumulator()
-        import random
 
         rng = random.Random(seed)
         for record in records:
